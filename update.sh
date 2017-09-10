@@ -14,9 +14,7 @@ GOARCH=$3
 GOOS=${GOOS:-linux}
 GOARCH=${GOARCH:-amd64}
 
-mkdir registry
-
-echo "Fetching and building distribution $VERSION..."
+echo "Fetching and building distribution $VERSION... ($GOOS/$GOARCH)"
 
 git clone -b $VERSION https://github.com/docker/distribution.git build
 docker build -t distribution-builder --build-arg GOOS=$GOOS --build-arg GOARCH=$GOARCH build
