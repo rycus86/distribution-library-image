@@ -12,7 +12,8 @@ before_script:
     export DOCKER_TAG="$TRAVIS_BRANCH-$DOCKER_ARCH"
   fi
 # output result tag
-- echo "Using tag: $DOCKER_TAG"
+- >
+  echo "Using tag: $DOCKER_TAG"
 
 script:
 # setup QEMU
