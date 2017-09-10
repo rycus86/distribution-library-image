@@ -14,16 +14,12 @@ GOARCH=$3
 GOOS=${GOOS:-linux}
 GOARCH=${GOARCH:-amd64}
 
-# cd to the current directory so the script can be run from anywhere.
-cd `dirname $0`
+mkdir registry
 
 echo "Fetching and building distribution $VERSION..."
 
-# Create a temporary directory.
-TEMP=`mktemp -d /$TMPDIR/distribution.XXXXXX`
-
-git clone -b $VERSION https://github.com/docker/distribution.git $TEMP
-docker build -t distribution-builder --build-arg GOOS=$GOOS --build-arg GOARCH=$GOARCH $TEMP
+git clone -b $VERSION https://github.com/docker/distribution.git build
+docker build -t distribution-builder --build-arg GOOS=$GOOS --build-arg GOARCH=$GOARCH build
 
 # Create a dummy distribution-build container so we can run a cp against it.
 ID=$(docker create distribution-builder)

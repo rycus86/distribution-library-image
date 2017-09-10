@@ -11,6 +11,8 @@ before_script:
   else
     export DOCKER_TAG="$TRAVIS_BRANCH-$DOCKER_ARCH"
   fi
+# output result tag
+- echo "Using tag: $DOCKER_TAG"
 
 script:
 # setup QEMU
@@ -18,7 +20,7 @@ script:
 # update
 - ./update.sh $TRAVIS_BRANCH $GOOS $GOARCH
 # replace base image
-- sed -i "s#FROM <base-image>#FROM $DOCKER_BASE#" Dockerfile
+- sed -i "s#FROM alpine:3.4#FROM $DOCKER_BASE#" Dockerfile
 # build image
 - docker build -t docker-registry:$DOCKER_TAG .
 # test
