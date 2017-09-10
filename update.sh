@@ -11,9 +11,6 @@ VERSION=$1
 GOOS=$2
 GOARCH=$3
 
-GOOS=${GOOS:-linux}
-GOARCH=${GOARCH:-amd64}
-
 echo "Fetching and building distribution $VERSION... ($GOOS/$GOARCH)"
 
 git clone -b $VERSION https://github.com/docker/distribution.git build
