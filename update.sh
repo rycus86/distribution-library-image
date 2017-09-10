@@ -8,6 +8,11 @@ if [ $# -eq 0 ] ; then
 fi
 
 VERSION=$1
+GOOS=$2
+GOARCH=$3
+
+GOOS=${GOOS:-linux}
+GOARCH=${GOARCH:-amd64}
 
 # cd to the current directory so the script can be run from anywhere.
 cd `dirname $0`
@@ -18,7 +23,7 @@ echo "Fetching and building distribution $VERSION..."
 TEMP=`mktemp -d /$TMPDIR/distribution.XXXXXX`
 
 git clone -b $VERSION https://github.com/docker/distribution.git $TEMP
-docker build -t distribution-builder $TEMP
+docker build -t distribution-builder --build-arg GOOS=$GOOS --build-arg GOARCH=$GOARCH $TEMP
 
 # Create a dummy distribution-build container so we can run a cp against it.
 ID=$(docker create distribution-builder)

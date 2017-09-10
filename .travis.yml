@@ -1,0 +1,35 @@
+sudo: required
+
+services:
+- docker
+
+before_script:
+# setup docker image tag
+- >
+  if [ "$TRAVIS_BRANCH" == "master" ]; then
+    export DOCKER_TAG="$DOCKER_ARCH"
+  else
+    export DOCKER_TAG="$TRAVIS_BRANCH-$DOCKER_ARCH"
+  fi
+
+script:
+# setup QEMU
+- docker run --rm --privileged multiarch/qemu-user-static:register --reset
+# update
+- ./update.sh $TRAVIS_BRANCH $GOOS $GOARCH
+# replace base image
+- sed -i "s#FROM <base-image>#FROM $DOCKER_BASE#" Dockerfile
+# build image
+- docker build -t docker-registry:$DOCKER_TAG .
+# test
+- docker run --rm -it docker-registry:$DOCKER_TAG -v | grep -E '^registry '
+# push image
+- >
+  docker login -u="rycus86" -p="$DOCKER_PASSWORD"
+  docker tag docker-registry:$DOCKER_TAG rycus86/docker-registry:$DOCKER_TAG
+  docker push rycus86/docker-registry:$DOCKER_TAG
+
+env:
+  matrix:
+  - DOCKER_ARCH=armhf    DOCKER_BASE=rycus86/armhf-alpine-qemu    GOOS=linux  GOARCH=arm
+  - DOCKER_ARCH=aarch64  DOCKER_BASE=rycus86/arm64v8-alpine-qemu  GOOS=linux  GOARCH=arm64
