@@ -24,8 +24,6 @@ script:
 - sed -i "s#FROM alpine:3.4#FROM $DOCKER_BASE#" Dockerfile
 # build image
 - docker build -t docker-registry:$DOCKER_TAG .
-# test
-- docker run --rm -it docker-registry:$DOCKER_TAG -v | grep -E '^registry '
 
 after_success:
 # push image
