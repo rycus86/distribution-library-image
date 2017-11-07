@@ -3,36 +3,68 @@ sudo: required
 services:
 - docker
 
-before_script:
-# setup docker image tag
-- |
-  if [ "$TRAVIS_BRANCH" == "master" ]; then
-    export DOCKER_TAG="$DOCKER_ARCH"
-  else
-    export DOCKER_TAG="$TRAVIS_BRANCH-$DOCKER_ARCH"
-  fi
-# output result tag
-- >
-  echo "Using tag: $DOCKER_TAG"
-# update
-- ./update.sh $TRAVIS_BRANCH $GOOS $GOARCH
+install: skip
 
-script:
-# setup QEMU
-- docker run --rm --privileged multiarch/qemu-user-static:register --reset
-# replace base image
-- sed -i "s#FROM alpine:3.4#FROM $DOCKER_BASE#" Dockerfile
-# build image
-- docker build -t docker-registry:$DOCKER_TAG .
+jobs:
+  include:
+    - &deploy-stage
+      stage: build and deploy
+      before_script:
+        # setup docker image tag
+        - |
+          if [ "$TRAVIS_BRANCH" == "master" ]; then
+            export DOCKER_TAG="$DOCKER_ARCH"
+          else
+            export DOCKER_TAG="$TRAVIS_BRANCH-$DOCKER_ARCH"
+          fi
+        # output result tag
+        - >
+          echo "Using tag: $DOCKER_TAG"
+        # update
+        - ./update.sh $TRAVIS_BRANCH $GOOS $GOARCH
 
-after_success:
-# push image
-- |
-  docker login -u="rycus86" -p="$DOCKER_PASSWORD"
-  docker tag docker-registry:$DOCKER_TAG rycus86/docker-registry:$DOCKER_TAG
-  docker push rycus86/docker-registry:$DOCKER_TAG
+      script:
+        # setup QEMU
+        - docker run --rm --privileged multiarch/qemu-user-static:register --reset
+        # replace base image
+        - sed -i "s#FROM alpine:3.4#FROM $DOCKER_BASE#" Dockerfile
+        # build image
+        - docker build -t docker-registry:$DOCKER_TAG .
 
-env:
-  matrix:
-  - DOCKER_ARCH=armhf    DOCKER_BASE=rycus86/armhf-alpine-qemu    GOOS=linux  GOARCH=arm
-  - DOCKER_ARCH=aarch64  DOCKER_BASE=rycus86/arm64v8-alpine-qemu  GOOS=linux  GOARCH=arm64
+      after_success:
+        # push image
+        - |
+          docker login -u="rycus86" -p="$DOCKER_PASSWORD"
+          docker tag docker-registry:$DOCKER_TAG rycus86/docker-registry:$DOCKER_TAG
+          docker push rycus86/docker-registry:$DOCKER_TAG
+      env:
+        - DOCKER_ARCH=amd64
+        - DOCKER_BASE=alpine:3.4
+        - GOOS=linux
+        - GOARCH=amd64
+
+    - <<: *deploy-stage
+      env:
+        - DOCKER_ARCH=armhf
+        - DOCKER_BASE=rycus86/armhf-alpine-qemu
+        - GOOS=linux
+        - GOARCH=arm
+
+    - <<: *deploy-stage
+      env:
+        - DOCKER_ARCH=aarch64
+        - DOCKER_BASE=rycus86/arm64v8-alpine-qemu
+        - GOOS=linux
+        - GOARCH=arm64
+
+    - stage: manifest
+      script:
+        - |
+          if [ "$TRAVIS_BRANCH" != "master" ]; then
+              sed -i "s#rycus86/docker-registry:#rycus86/docker-registry:${TRAVIS_BRANCH}-#" manifest.yml
+              sed -i "s#rycus86/docker-registry:${TRAVIS_BRANCH}-latest#rycus86/docker-registry:${TRAVIS_BRANCH}#" manifest.yml
+          fi
+        - docker login -u="rycus86" -p="${DOCKER_PASSWORD}"
+        - curl -fsSL https://github.com/estesp/manifest-tool/releases/download/v0.7.0/manifest-tool-linux-amd64 > ./manifest-tool
+        - chmod +x ./manifest-tool
+        - ./manifest-tool push from-spec manifest.yml
